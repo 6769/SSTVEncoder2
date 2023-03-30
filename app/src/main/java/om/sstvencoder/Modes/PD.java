@@ -66,13 +66,15 @@ abstract class PD extends Mode {
     }
 
     private void addSyncPulse() {
-        for (int i = 0; i < mSyncPulseSamples; ++i)
-            setTone(mSyncPulseFrequency);
+//        for (int i = 0; i < mSyncPulseSamples; ++i)
+//            setTone(mSyncPulseFrequency);
+        setTone(mSyncPulseFrequency, 20);
     }
 
     private void addPorch() {
-        for (int i = 0; i < mPorchSamples; ++i)
-            setTone(mPorchFrequency);
+//        for (int i = 0; i < mPorchSamples; ++i)
+//            setTone(mPorchFrequency);
+        setTone(mPorchFrequency, 2.08);
     }
 
     private void addYScan(int y) {

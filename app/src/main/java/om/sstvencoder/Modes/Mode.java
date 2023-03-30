@@ -26,11 +26,14 @@ abstract class Mode implements IMode {
     protected int mLine;
     private IOutput mOutput;
     private double mSampleRate;
+    private double mSampleT;
+    private double mFreqTailTime;
     private double mRunningIntegral;
 
     protected Mode(Bitmap bitmap, IOutput output) {
         mOutput = output;
         mSampleRate = mOutput.getSampleRate();
+        mSampleT = mFreqTailTime = 1 / mSampleRate;
         mBitmap = bitmap;
     }
 
@@ -87,37 +90,62 @@ abstract class Mode implements IMode {
         double visBitSSFrequency = 1200.0;
         double[] visBitFrequency = new double[]{1300.0, 1100.0};
 
-        for (int i = 0; i < leaderToneSamples; ++i)
-            setTone(leaderToneFrequency);
+//        for (int i = 0; i < leaderToneSamples; ++i)
+//            setTone(leaderToneFrequency);
+        setTone(leaderToneFrequency, 300);
 
-        for (int i = 0; i < breakSamples; ++i)
-            setTone(breakFrequency);
+//        for (int i = 0; i < breakSamples; ++i)
+//            setTone(breakFrequency);
+        setTone(breakFrequency, 10);
 
-        for (int i = 0; i < leaderToneSamples; ++i)
-            setTone(leaderToneFrequency);
+//        for (int i = 0; i < leaderToneSamples; ++i)
+//            setTone(leaderToneFrequency);
+        setTone(leaderToneFrequency, 300);
 
-        for (int i = 0; i < visBitSamples; ++i)
-            setTone(visBitSSFrequency);
+//        for (int i = 0; i < visBitSamples; ++i)
+//            setTone(visBitSSFrequency);
+        setTone(visBitSSFrequency, 30);
 
         int parity = 0;
         for (int pos = 0; pos < 7; ++pos) {
             int bit = (mVISCode >> pos) & 1;
             parity ^= bit;
-            for (int i = 0; i < visBitSamples; ++i)
-                setTone(visBitFrequency[bit]);
+//            for (int i = 0; i < visBitSamples; ++i)
+//                setTone(visBitFrequency[bit]);
+            setTone(visBitFrequency[bit], 30);
         }
 
-        for (int i = 0; i < visBitSamples; ++i)
-            setTone(visBitFrequency[parity]);
+//        for (int i = 0; i < visBitSamples; ++i)
+//            setTone(visBitFrequency[parity]);
+        setTone(visBitFrequency[parity], 30);
 
-        for (int i = 0; i < visBitSamples; ++i)
-            setTone(visBitSSFrequency);
+
+//        for (int i = 0; i < visBitSamples; ++i)
+//            setTone(visBitSSFrequency);
+        setTone(visBitSSFrequency, 30);
     }
 
     protected abstract void writeEncodedLine();
 
     protected int convertMsToSamples(double durationMs) {
         return (int) Math.round(durationMs * mSampleRate / 1000.0);
+    }
+
+
+    protected void setTone(double frequency, double durationMs) {
+        double remnant = (durationMs / 1000) % mSampleT;
+        double headerTime = mSampleT - mFreqTailTime;
+        mFreqTailTime = remnant - headerTime;   //current tail time for next frequency usage.
+        final int rounds = convertMsToSamples(durationMs);
+
+        final double omega = 2.0 * frequency * Math.PI; // ω = 2π·f
+        mRunningIntegral += headerTime * omega;
+
+        mOutput.write(Math.sin(mRunningIntegral));
+        for (int i = 0; i < rounds - 1; ++i)
+            setTone(frequency);
+        mRunningIntegral += mFreqTailTime * omega;
+
     }
 
     protected void setTone(double frequency) {
